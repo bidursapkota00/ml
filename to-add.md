@@ -242,3 +242,158 @@ print(X_test)
 ---
 
 Regression models (both linear and non-linear) are used for predicting a real value, like salary for example. If your independent variable is time, then you are forecasting future values, otherwise your model is predicting present but unknown values. Regression technique vary from Linear Regression to SVR and Random Forests Regression.
+
+- **Formula**: $\hat{y} = b_0 + b_1X_1$
+- **Labels**:
+- $\hat{y}$: Dependent variable
+- $b_0$: y-intercept (constant)
+- $b_1$: Slope coefficient
+- $X_1$: Independent variable
+
+- **General Formula**: $\hat{y} = b_0 + b_1X_1$
+- **Applied Formula**: $Potatoes[t] = b_0 + b_1 \times Fertilizer[kg]$
+- **Values**:
+- $b_0 = 8[t]$
+- $b_1 = 3[\frac{t}{kg}]$
+
+- **Heading**: Ordinary Least Squares:
+- **Residual Definition**: $residual: \epsilon_i = y_i - \hat{y}_i$
+- **Regression Equation**: $\hat{y} = b_0 + b_1X_1$
+- **Goal**: $b_0, b_1$ such that: $SUM(y_i - \hat{y}_i)^2$ is minimized
+
+data:
+
+```csv
+YearsExperience,Salary
+1.1,39343.00
+1.3,46205.00
+1.5,37731.00
+2.0,43525.00
+2.2,39891.00
+2.9,56642.00
+3.0,60150.00
+3.2,54445.00
+3.2,64445.00
+3.7,57189.00
+3.9,63218.00
+4.0,55794.00
+4.0,56957.00
+4.1,57081.00
+4.5,61111.00
+4.9,67938.00
+5.1,66029.00
+5.3,83088.00
+5.9,81363.00
+6.0,93940.00
+6.8,91738.00
+7.1,98273.00
+7.9,101302.00
+8.2,113812.00
+8.7,109431.00
+9.0,105582.00
+9.5,116969.00
+9.6,112635.00
+10.3,122391.00
+10.5,121872.00
+```
+
+# Simple Linear Regression
+
+## Importing the libraries
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+```
+
+## Importing the dataset
+
+```python
+dataset = pd.read_csv('Salary_Data.csv')
+X = dataset.iloc[:, :-1].values
+y = dataset.iloc[:, -1].values
+```
+
+## Splitting the dataset into the Training set and Test set
+
+```python
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 1/3, random_state = 0)
+```
+
+## Training the Simple Linear Regression model on the Training set
+
+```python
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+regressor.fit(X_train, y_train)
+```
+
+    LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False)
+
+## Predicting the Test set results
+
+```python
+y_pred = regressor.predict(X_test)
+```
+
+## Visualising the Training set results
+
+```python
+plt.scatter(X_train, y_train, color = 'red')
+plt.plot(X_train, regressor.predict(X_train), color = 'blue')
+plt.title('Salary vs Experience (Training set)')
+plt.xlabel('Years of Experience')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![png](/images/2-regression/simple_linear_regression/simple_linear_regression_1.png)
+
+## Visualising the Test set results
+
+```python
+plt.scatter(X_test, y_test, color = 'red')
+plt.plot(X_train, regressor.predict(X_train), color = 'blue')
+plt.title('Salary vs Experience (Test set)')
+plt.xlabel('Years of Experience')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![png](/images/2-regression/simple_linear_regression/simple_linear_regression_2.png)
+
+## Making a single prediction (for example the salary of an employee with 12 years of experience)
+
+```py
+print(regressor.predict([[12]]))
+```
+
+    [138967.5015615]
+
+Therefore, our model predicts that the salary of an employee with 12 years of experience is $ 138967,5.
+
+**Important note:** Notice that the value of the feature (12 years) was input in a double pair of square brackets. That's because the "predict" method always expects a 2D array as the format of its inputs. And putting 12 into a double pair of square brackets makes the input exactly a 2D array. Simply put:
+
+$12 \rightarrow \textrm{scalar}$
+
+$[12] \rightarrow \textrm{1D array}$
+
+$[[12]] \rightarrow \textrm{2D array}$
+
+## Getting the final linear regression equation with the values of the coefficients
+
+```py
+print(regressor.coef_)
+print(regressor.intercept_)
+```
+
+    [9345.94244312]
+    26816.192244031183
+
+Therefore, the equation of our simple linear regression model is:
+
+$$\textrm{Salary} = 9345.94 \times \textrm{YearsExperience} + 26816.19$$
+
+**Important Note:** To get these coefficients we called the "coef*" and "intercept*" attributes from our regressor object. Attributes in Python are different than methods and usually return a simple value or an array of values.
