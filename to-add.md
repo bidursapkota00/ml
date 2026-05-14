@@ -397,3 +397,17 @@ Therefore, the equation of our simple linear regression model is:
 $$\textrm{Salary} = 9345.94 \times \textrm{YearsExperience} + 26816.19$$
 
 **Important Note:** To get these coefficients we called the "coef*" and "intercept*" attributes from our regressor object. Attributes in Python are different than methods and usually return a simple value or an array of values.
+
+---
+
+1-2
+
+Dummy variables for categorical data and dummy variable trap
+
+3
+
+statistical significance and p value
+
+4
+
+5-10
