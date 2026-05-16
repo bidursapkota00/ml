@@ -400,14 +400,157 @@ $$\textrm{Salary} = 9345.94 \times \textrm{YearsExperience} + 26816.19$$
 
 ---
 
-1-2
+## Multiple Linear Regression Formula
+
+$$\hat{y} = b_0 + b_1X_1 + b_2X_2 + \dots + b_nX_n$$
+
+- **$\hat{y}$:** Dependent variable
+- **$b_0$:** y-intercept (constant)
+- **$b_1$:** Slope coefficient 1
+- **$X_1$:** Independent variable 1
+- **$b_2$:** Slope coefficient 2
+- **$X_2$:** Independent variable 2
+- **$b_n$:** Slope coefficient n
+- **$X_n$:** Independent variable n
+
+---
+
+## Assumptions of Linear Regression
+
+### 1. Linearity
+
+(Linear relationship between Y and each X)
+
+### 2. Homoscedasticity
+
+(Equal variance)
+
+### 3. Multivariate Normality
+
+(Normality of error distribution)
+
+### 4. Independence
+
+(of observations. Includes "no autocorrelation")
+
+### 5. Lack of Multicollinearity
+
+(Predictors are not correlated with each other)
+
+- ✔️ $X_1 \nsim X_2$
+- ❌ $X_1 \sim X_2$
+
+### 6. The Outlier Check
+
+(This is not an assumption, but an "extra")
+
+---
 
 Dummy variables for categorical data and dummy variable trap
 
-3
+## Dummy Variables
+
+### Data Table
+
+| Profit     | R&D Spend  | Admin      | Marketing  | State      |
+| ---------- | ---------- | ---------- | ---------- | ---------- |
+| 192,261.83 | 165,349.20 | 136,897.80 | 471,784.10 | New York   |
+| 191,792.06 | 162,597.70 | 151,377.59 | 443,898.53 | California |
+| 191,050.39 | 153,441.51 | 101,145.55 | 407,934.54 | California |
+| 182,901.99 | 144,372.41 | 118,671.85 | 383,199.62 | New York   |
+| 166,187.94 | 142,107.34 | 91,391.77  | 366,168.42 | California |
+
+### Dummy Variables Columns
+
+| New York | California |
+| -------- | ---------- |
+| 1        | 0          |
+| 0        | 1          |
+| 0        | 1          |
+| 1        | 0          |
+| 0        | 1          |
+
+### Equation
+
+$$y = b_0 + b_1 \cdot x_1 + b_2 \cdot x_2 + b_3 \cdot x_3 + b_4 \cdot D_1 + \cancel{b_5 \cdot D_2}$$
+
+> **Always omit one dummy variable**
+
+---
 
 statistical significance and p value
 
-4
+## Statistical Significance
 
-5-10
+- $H_0$: This is a fair coin
+- $H_1$: This is not a fair coin
+
+### P-Value Scale
+
+- 0.5
+- 0.25
+- 0.12
+- 0.06
+- **$\alpha = 0.05$** _(Significance threshold line)_
+- 0.03
+- 0.01
+
+---
+
+## **Building A Model**
+
+**5 methods of building models:**
+
+1. All-in
+2. Backward Elimination
+3. Forward Selection
+4. Bidirectional Elimination
+5. Score Comparison
+
+> _Note: Methods 2, 3, and 4 are grouped together under the bracket:_ **Stepwise Regression**
+
+---
+
+## **"All-in" – cases:**
+
+- Prior knowledge; OR
+- You have to; OR
+- Preparing for Backward Elimination
+
+---
+
+## **Backward Elimination**
+
+- **STEP 1:** Select a significance level to stay in the model (e.g. SL = 0.05)
+- **STEP 2:** Fit the full model with all possible predictors
+- **STEP 3:** Consider the predictor with the highest P-value. If P > SL, go to STEP 4, otherwise go to FIN
+- **STEP 4:** Remove the predictor
+- **STEP 5:** Fit model without this variable\* and go back to step 3.
+
+---
+
+## **Forward Selection**
+
+- **STEP 1:** Select a significance level to enter the model (e.g. SL = 0.05)
+- **STEP 2:** Fit all simple regression models **y ~ xₙ** Select the one with the lowest P-value
+- **STEP 3:** Keep this variable and fit all possible models with one extra predictor added to the one(s) you already have
+- **STEP 4:** Consider the predictor with the lowest P-value. If P < SL, go to STEP 3, otherwise go to FIN
+
+## **Bidirectional Elimination**
+
+- **STEP 1:** Select a significance level to enter and to stay in the model
+- e.g.: SLENTER = 0.05, SLSTAY = 0.05
+
+- **STEP 2:** Perform the next step of Forward Selection (new variables must have: P < SLENTER to enter)
+- **STEP 3:** Perform ALL steps of Backward Elimination (old variables must have P < SLSTAY to stay). Go to step 2.
+- **STEP 4:** No new variables can enter and no old variables can exit
+- **FIN:** Your Model Is Ready
+
+---
+
+## **All Possible Models**
+
+- **STEP 1:** Select a criterion of goodness of fit (e.g. Akaike criterion)
+- **STEP 2:** Construct All Possible Regression Models: $2^N-1$ total combinations
+- **STEP 3:** Select the one with the best criterion
+- **FIN:** Your Model Is Ready
