@@ -8,6 +8,7 @@
 
 1. [Data Preprocessing](#data-preprocessing)
 2. [Simple Linear Regression](#simple-linear-regression)
+3. [Multiple Linear Regression](#multiple-linear-regression)
 
 ---
 
@@ -500,6 +501,8 @@ plt.ylabel('Salary')
 plt.show()
 ```
 
+![Salary vs Experience (Training set) - Simple Linear Regression](/images/2-regression/simple_linear_regression/simple_linear_regression_1.png)
+
 `plt.scatter(X_train, y_train, color='red')` plots the actual training data as red dots. `plt.plot(X_train, regressor.predict(X_train), color='blue')` draws the regression line in blue by plotting predicted values against the training features. `plt.title()`, `plt.xlabel()`, and `plt.ylabel()` set the chart title and axis labels. `plt.show()` renders and displays the plot.
 
 **Important `plt.scatter` parameters:**
@@ -522,6 +525,8 @@ plt.xlabel('Years of Experience')
 plt.ylabel('Salary')
 plt.show()
 ```
+
+![Salary vs Experience (Test set) - Simple Linear Regression](/images/2-regression/simple_linear_regression/simple_linear_regression_2.png)
 
 The regression line is the same (trained on the training set). The red dots are the actual test data points. The closer the dots are to the line, the better the model. Note that `plt.plot` still uses `X_train` to draw the line because the model was trained on that data; the line itself does not change.
 
@@ -556,3 +561,139 @@ The final regression equation is:
 $$Salary = 9345.94 \times YearsExperience + 26816.19$$
 
 `coef_` returns an array of slope coefficients ($b_1$). It is an array because in multiple regression there would be one coefficient per feature. `intercept_` returns the y-intercept ($b_0$) as a single float. Together they define the complete linear equation. You can also compute the model's $R^2$ score using `regressor.score(X_test, y_test)`, which returns a value between 0 and 1 indicating how well the model explains the variance in the data.
+
+---
+
+## Multiple Linear Regression
+
+Multiple Linear Regression extends Simple Linear Regression to multiple independent variables. Instead of fitting a line in 2D, it fits a hyperplane in higher-dimensional space.
+
+**Formula:**
+
+$$\hat{y} = b_0 + b_1 X_1 + b_2 X_2 + \dots + b_n X_n$$
+
+- $\hat{y}$: predicted value (dependent variable)
+- $b_0$: y-intercept (constant term, the value of y when all X's are 0)
+- $b_1, b_2, \dots, b_n$: slope coefficients (how much y changes per unit change in each respective X, holding all other X's constant)
+- $X_1, X_2, \dots, X_n$: independent variables
+
+**Example:** Predicting profit from R&D spend, admin cost, and marketing spend: $Profit = b_0 + b_1 \times R\&D + b_2 \times Admin + b_3 \times Marketing$.
+
+### Assumptions of Linear Regression
+
+Before building a linear regression model, five assumptions must hold for the results to be reliable. These apply to both simple and multiple linear regression.
+
+**1. Linearity** — There must be a linear relationship between the dependent variable and each independent variable. If the true relationship is curved, a linear model will systematically mispredict. Check with scatter plots of y vs each X.
+
+**2. Homoscedasticity** — The variance of the residuals (errors) must be constant across all levels of the independent variables. If the spread of residuals increases or decreases with the predicted value (heteroscedasticity), the model's confidence intervals and p-values become unreliable. Check by plotting residuals vs predicted values.
+
+**3. Multivariate Normality** — The residuals must be normally distributed. This assumption is needed for hypothesis testing (p-values, confidence intervals) to be valid. With large sample sizes, this becomes less critical due to the Central Limit Theorem. Check with a Q-Q plot or histogram of residuals.
+
+**4. Independence** — Observations must be independent of each other. There should be no autocorrelation (where residuals are correlated with each other). This is especially relevant in time-series data where consecutive observations may be related. Check with the Durbin-Watson test.
+
+**5. No Multicollinearity** — Independent variables must not be highly correlated with each other. If $X_1$ and $X_2$ are strongly correlated, the model cannot reliably determine the individual effect of each variable. This inflates the variance of coefficient estimates and makes them unstable. Check with the Variance Inflation Factor (VIF); a VIF above 5-10 indicates problematic multicollinearity.
+
+Additionally, always check for outliers. Outliers are not an assumption but can heavily influence the regression line, especially in small datasets. Use leverage plots and Cook's distance to identify influential points.
+
+### Dummy Variables
+
+Categorical variables (e.g., State: New York, California) cannot be used directly in the regression equation. They must be converted into numerical form using dummy variables.
+
+**Example Dataset:**
+
+| Profit     | R&D Spend  | Admin      | Marketing  | State      |
+| ---------- | ---------- | ---------- | ---------- | ---------- |
+| 192,261.83 | 165,349.20 | 136,897.80 | 471,784.10 | New York   |
+| 191,792.06 | 162,597.70 | 151,377.59 | 443,898.53 | California |
+| 191,050.39 | 153,441.51 | 101,145.55 | 407,934.54 | California |
+| 182,901.99 | 144,372.41 | 118,671.85 | 383,199.62 | New York   |
+| 166,187.94 | 142,107.34 | 91,391.77  | 366,168.42 | California |
+
+One-Hot Encoding creates a binary column for each category:
+
+| New York | California |
+| -------- | ---------- |
+| 1        | 0          |
+| 0        | 1          |
+| 0        | 1          |
+| 1        | 0          |
+| 0        | 1          |
+
+The regression equation becomes:
+
+$$y = b_0 + b_1 \cdot X_1 + b_2 \cdot X_2 + b_3 \cdot X_3 + b_4 \cdot D_1$$
+
+Where $X_1, X_2, X_3$ are the numerical features (R&D, Admin, Marketing) and $D_1$ is the dummy variable for one state.
+
+#### The Dummy Variable Trap
+
+If a categorical variable has $n$ categories, you must include only $n - 1$ dummy columns. Including all $n$ creates perfect multicollinearity because one column can always be predicted from the others (e.g., if New York = 0, then California must = 1). This is called the dummy variable trap.
+
+**Always omit one dummy variable.** The omitted category becomes the baseline, and the coefficients of the remaining dummies represent the difference relative to that baseline. For example, if California is omitted, the coefficient of New York tells you how much more (or less) profit New York generates compared to California, all else equal.
+
+Note: scikit-learn's `LinearRegression` does not require you to manually drop a dummy column because it can handle the multicollinearity internally. However, for statistical models (e.g., `statsmodels`), you must drop one column or use `OneHotEncoder(drop='first')`.
+
+### Statistical Significance & P-Values
+
+Statistical significance determines whether a predictor actually has a real effect on the dependent variable or whether the observed relationship is due to random chance.
+
+**Null Hypothesis ($H_0$):** The predictor has no effect on the dependent variable (its coefficient is zero).
+
+**Alternative Hypothesis ($H_1$):** The predictor does have an effect (its coefficient is not zero).
+
+The **p-value** is the probability of observing the data (or something more extreme) assuming $H_0$ is true. A small p-value means it is unlikely the result occurred by chance.
+
+**Significance Level ($\alpha$):** The threshold for rejecting $H_0$, typically set to 0.05 (5%).
+
+- If p-value < $\alpha$ (e.g., p < 0.05): Reject $H_0$. The predictor is statistically significant.
+- If p-value ≥ $\alpha$ (e.g., p ≥ 0.05): Fail to reject $H_0$. The predictor is not statistically significant and may not belong in the model.
+
+### Building a Model
+
+With multiple potential predictors, you need to decide which variables to include. There are five methods for building a model.
+
+#### All-In
+
+Include all predictors in the model. Use when:
+
+- You have prior knowledge that all variables are relevant.
+- The domain requires it (e.g., regulatory compliance).
+- You are preparing for Backward Elimination.
+
+#### Backward Elimination
+
+1. Select a significance level to stay in the model (e.g., SL = 0.05).
+2. Fit the full model with all predictors.
+3. Find the predictor with the highest p-value. If p > SL, go to step 4. Otherwise, the model is ready (FIN).
+4. Remove that predictor.
+5. Refit the model without the removed variable. Go back to step 3.
+
+This starts with everything and removes one variable at a time until all remaining predictors are significant.
+
+#### Forward Selection
+
+1. Select a significance level to enter the model (e.g., SL = 0.05).
+2. Fit all simple regression models ($y \sim X_n$). Select the predictor with the lowest p-value.
+3. Keep this variable and fit all possible models with one extra predictor added to the current set.
+4. Find the predictor with the lowest p-value among the new additions. If p < SL, go to step 3. Otherwise, the model is ready (FIN — keep the previous model, not the last one tested).
+
+This starts with nothing and adds one variable at a time until no more significant predictors can be added.
+
+#### Bidirectional Elimination
+
+1. Select two significance levels: SL_ENTER (to enter, e.g., 0.05) and SL_STAY (to stay, e.g., 0.05).
+2. Perform the next step of Forward Selection (new variables must have p < SL_ENTER to enter).
+3. Perform all steps of Backward Elimination (existing variables must have p < SL_STAY to stay).
+4. Repeat steps 2-3 until no new variables can enter and no existing variables can exit. The model is ready (FIN).
+
+This combines both methods to prevent variables that were added early from remaining in the model when they become insignificant after other variables are added.
+
+#### All Possible Models (Score Comparison)
+
+1. Select a criterion of goodness of fit (e.g., Akaike Information Criterion, $R^2_{adj}$, BIC).
+2. Construct all possible regression models: $2^N - 1$ total combinations for N predictors.
+3. Select the model with the best criterion score.
+
+This is the most thorough approach but computationally expensive. With 10 predictors, there are 1,023 possible models. With 20 predictors, over 1 million.
+
+> **Note:** Backward Elimination, Forward Selection, and Bidirectional Elimination are collectively known as Stepwise Regression. In practice, Backward Elimination is the most commonly used because it is fast and straightforward.
