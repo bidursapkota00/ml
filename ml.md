@@ -1,4 +1,4 @@
-﻿# Machine Learning
+# Machine Learning
 
 ## The Machine Learning Process
 
@@ -58,7 +58,17 @@ X = dataset.iloc[:, :-1].values
 y = dataset.iloc[:, -1].values
 ```
 
-`iloc[:, :-1]` selects all rows and all columns except the last one (features). `iloc[:, -1]` selects all rows of the last column (dependent variable). `.values` converts the selection into a NumPy array.
+`pd.read_csv('Data.csv')` reads the CSV file and returns a DataFrame. `iloc[:, :-1]` selects all rows (`:`) and all columns except the last one (`:-1`), which gives the features. `iloc[:, -1]` selects all rows of the last column, which is the dependent variable. `.values` converts the DataFrame selection into a NumPy array, which scikit-learn expects as input.
+
+**Important `read_csv` parameters:**
+
+| Parameter   | Purpose                                                |
+| ----------- | ------------------------------------------------------ |
+| `sep`       | Delimiter to use (default `,`). Use `sep='\t'` for TSV |
+| `header`    | Row number to use as column names (default `0`)        |
+| `index_col` | Column to use as the row index                         |
+| `na_values` | Additional strings to recognize as NaN                 |
+| `encoding`  | File encoding (e.g., `'utf-8'`, `'latin-1'`)           |
 
 ```python
 print(X)
@@ -96,7 +106,17 @@ imputer.fit(X[:, 1:3])
 X[:, 1:3] = imputer.transform(X[:, 1:3])
 ```
 
-`fit()` computes the mean of columns 1 and 2 (Age and Salary). `transform()` replaces the `nan` values with those computed means. Only numerical columns are imputed because mean is undefined for strings.
+`SimpleImputer` replaces missing values based on a chosen strategy. `missing_values=np.nan` tells the imputer what to look for; the default is `np.nan`. `strategy='mean'` replaces each missing value with the mean of its column. `fit()` computes the mean of columns 1 and 2 (Age and Salary). `transform()` replaces the `nan` values with those computed means. Only numerical columns are imputed because mean is undefined for strings. `X[:, 1:3]` selects columns at index 1 and 2 (Python slicing excludes the end index).
+
+**Important `SimpleImputer` parameters:**
+
+| Parameter        | Purpose                                                            |
+| ---------------- | ------------------------------------------------------------------ |
+| `strategy`       | `'mean'` (default), `'median'`, `'most_frequent'`, `'constant'`    |
+| `fill_value`     | Value to use when `strategy='constant'` (e.g., `0` or `'missing'`) |
+| `missing_values` | The placeholder for missing values (default `np.nan`)              |
+
+`'median'` is more robust to outliers than `'mean'`. `'most_frequent'` replaces with the mode, useful for categorical columns. `'constant'` fills with a fixed value specified by `fill_value`.
 
 ```python
 print(X)
@@ -121,7 +141,7 @@ ML models work with numbers, not strings. Categorical columns must be converted.
 
 ### Encoding the Independent Variable (One-Hot Encoding)
 
-For features, use **One-Hot Encoding**. It creates one binary column per category. This avoids imposing a false numerical order (e.g., France=0, Germany=1, Spain=2 would wrongly imply Germany is "between" France and Spain).
+For features, use One-Hot Encoding. It creates one binary column per category. This avoids imposing a false numerical order (e.g., France=0, Germany=1, Spain=2 would wrongly imply Germany is "between" France and Spain).
 
 ```python
 from sklearn.compose import ColumnTransformer
@@ -130,7 +150,23 @@ ct = ColumnTransformer(transformers=[('encoder', OneHotEncoder(), [0])], remaind
 X = np.array(ct.fit_transform(X))
 ```
 
-`ColumnTransformer` applies `OneHotEncoder` to column index 0 (Country) and passes through the remaining columns unchanged.
+`ColumnTransformer` applies different transformations to different columns in a single step. `transformers` takes a list of tuples in the format `(name, transformer, columns)`. `'encoder'` is a label you choose for this transformation. `OneHotEncoder()` is the transformer to apply. `[0]` specifies column index 0 (Country) as the target. `remainder='passthrough'` keeps all other columns unchanged; without this, non-specified columns are dropped by default. `fit_transform()` computes the encoding and applies it in one step. The result is wrapped in `np.array()` to ensure a consistent NumPy array format.
+
+**Important `ColumnTransformer` parameters:**
+
+| Parameter   | Purpose                                                                    |
+| ----------- | -------------------------------------------------------------------------- |
+| `remainder` | `'drop'` (default) drops untransformed columns, `'passthrough'` keeps them |
+
+**Important `OneHotEncoder` parameters:**
+
+| Parameter        | Purpose                                                              |
+| ---------------- | -------------------------------------------------------------------- |
+| `drop`           | `'first'` drops the first category to avoid multicollinearity        |
+| `sparse_output`  | `False` returns a dense array instead of a sparse matrix             |
+| `handle_unknown` | `'error'` (default) or `'ignore'` for unseen categories at transform |
+
+`drop='first'` is important for linear models where having all dummy columns creates perfect multicollinearity (the dummy variable trap).
 
 ```python
 print(X)
@@ -153,13 +189,15 @@ The three Country values become three binary columns: `[France, Germany, Spain]`
 
 ### Encoding the Dependent Variable (Label Encoding)
 
-For the dependent variable, use **Label Encoding**. It converts categories into integers. This is acceptable here because the model treats y as a label, not a numeric value with magnitude.
+For the dependent variable, use Label Encoding. It converts categories into integers. This is acceptable here because the model treats y as a label, not a numeric value with magnitude.
 
 ```python
 from sklearn.preprocessing import LabelEncoder
 le = LabelEncoder()
 y = le.fit_transform(y)
 ```
+
+`LabelEncoder` assigns an integer to each unique class in alphabetical order. `fit_transform()` learns the mapping and applies it in one step. `le.classes_` stores the original class labels if you need to reverse the encoding later using `le.inverse_transform()`.
 
 ```python
 print(y)
@@ -180,7 +218,19 @@ from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 1)
 ```
 
-`random_state` fixes the random seed so the split is reproducible.
+`train_test_split` shuffles the data and splits it into training and test subsets. `X, y` are the feature matrix and target vector to split. `test_size=0.2` allocates 20% of the data to the test set and the remaining 80% to training. `random_state=1` fixes the random seed so the split is reproducible; any integer works, but using the same value always produces the same split.
+
+**Important `train_test_split` parameters:**
+
+| Parameter      | Purpose                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `test_size`    | Fraction (`0.2`), integer (count), or `None`. Default is `0.25`              |
+| `train_size`   | Complement of `test_size`. Can specify instead of or along with it           |
+| `random_state` | Seed for reproducibility. `None` (default) uses a different split each time  |
+| `shuffle`      | `True` (default) shuffles data before splitting. Set `False` for time-series |
+| `stratify`     | Pass `y` to ensure the class ratio is preserved in both sets                 |
+
+`stratify=y` is important for imbalanced datasets. If 90% of samples are class A and 10% are class B, stratification ensures both the training and test sets maintain this 90/10 ratio.
 
 ```python
 print(X_train)
@@ -236,7 +286,7 @@ Rescales values to the range **[0, 1]**. Best for algorithms that require bounde
 
 $$X' = \frac{X - \mu}{\sigma}$$
 
-Rescales values to have mean = 0 and standard deviation = 1. Most values fall in **[-3, +3]**. Works well for most algorithms (Linear Regression, SVM, PCA). Less sensitive to outliers.
+Rescales values to have mean = 0 and standard deviation = 1. Most values fall in [-3, +3]. Works well for most algorithms (Linear Regression, SVM, PCA). Less sensitive to outliers.
 
 ### Which to Choose?
 
@@ -244,7 +294,7 @@ Standardization is the safer default because it works regardless of the data dis
 
 ### Why Scale After Splitting?
 
-Feature scaling must happen after the train-test split to avoid **data leakage**. If you scale before splitting, the mean, standard deviation, min, and max are computed using test data too. This means the model indirectly "sees" test data during training, producing overly optimistic results that will not generalize.
+Feature scaling must happen after the train-test split to avoid data leakage. If you scale before splitting, the mean, standard deviation, min, and max are computed using test data too. This means the model indirectly "sees" test data during training, producing overly optimistic results that will not generalize.
 
 The correct workflow: fit the scaler on the training set only, then apply that same transformation to the test set.
 
@@ -261,7 +311,23 @@ X_train[:, 3:] = sc.fit_transform(X_train[:, 3:])
 X_test[:, 3:] = sc.transform(X_test[:, 3:])
 ```
 
-`fit_transform()` computes mean and standard deviation from the training set and applies the transformation. `transform()` applies the same training-set parameters to the test set without refitting.
+`StandardScaler` transforms features by removing the mean and scaling to unit variance. `fit_transform()` computes the mean ($\mu$) and standard deviation ($\sigma$) from the training set and applies the transformation $\frac{X - \mu}{\sigma}$ in one step. `transform()` applies the same training-set parameters ($\mu$ and $\sigma$) to the test set without refitting, preventing data leakage. `X_train[:, 3:]` selects columns from index 3 onward (Age, Salary), leaving the one-hot encoded columns (0, 1, 2) untouched.
+
+**Important `StandardScaler` parameters:**
+
+| Parameter   | Purpose                                                                            |
+| ----------- | ---------------------------------------------------------------------------------- |
+| `with_mean` | `True` (default) centers data by subtracting the mean. Set `False` for sparse data |
+| `with_std`  | `True` (default) scales data to unit variance                                      |
+
+**Alternative scalers in scikit-learn:**
+
+| Scaler         | Purpose                                                                |
+| -------------- | ---------------------------------------------------------------------- |
+| `MinMaxScaler` | Scales to a given range, default [0, 1]. Use `feature_range` to change |
+| `RobustScaler` | Uses median and IQR instead of mean and std. Robust to outliers        |
+| `MaxAbsScaler` | Scales by the maximum absolute value. Good for sparse data             |
+| `Normalizer`   | Scales each sample (row) to unit norm, not each feature                |
 
 ```python
 print(X_train)
@@ -292,8 +358,6 @@ Only columns 3 onward (Age, Salary) are scaled. The one-hot encoded columns (0, 
 ---
 
 # Part 2: Simple Linear Regression
-
-## Concept
 
 Regression models predict a continuous real value. Simple Linear Regression models the relationship between one independent variable (X) and one dependent variable (y) as a straight line.
 
@@ -379,6 +443,8 @@ from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 1/3, random_state = 0)
 ```
 
+`test_size=1/3` allocates one-third of the data (10 observations) to the test set and the remaining two-thirds (20 observations) to training. `random_state=0` fixes the seed for reproducibility.
+
 Feature scaling is not required for Simple Linear Regression because the `LinearRegression` class handles it internally.
 
 ## Step 4: Train the Model
@@ -389,13 +455,26 @@ regressor = LinearRegression()
 regressor.fit(X_train, y_train)
 ```
 
-`fit()` computes the optimal $b_0$ and $b_1$ using OLS on the training data.
+`LinearRegression()` creates a linear regression model using Ordinary Least Squares. `fit(X_train, y_train)` computes the optimal $b_0$ (intercept) and $b_1$ (slope) by minimizing the sum of squared residuals on the training data. After fitting, the model stores these values in `regressor.intercept_` and `regressor.coef_`.
+
+**Important `LinearRegression` parameters:**
+
+| Parameter       | Purpose                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------- |
+| `fit_intercept` | `True` (default) calculates the intercept $b_0$. Set `False` to force the line through the origin |
+| `copy_X`        | `True` (default) copies X before fitting. Set `False` to modify X in place and save memory        |
+| `n_jobs`        | Number of CPU cores for computation. `None` (default) uses 1 core. `-1` uses all cores            |
+| `positive`      | `False` (default). Set `True` to force all coefficients to be positive                            |
+
+`fit_intercept=False` is used when you know the relationship passes through the origin (e.g., zero input means zero output). `n_jobs` only affects multi-target regression (multiple y columns); for single-target regression it has no effect.
 
 ## Step 5: Predict Test Set Results
 
 ```python
 y_pred = regressor.predict(X_test)
 ```
+
+`predict(X_test)` takes the test features and returns predicted salary values using the learned equation $\hat{y} = b_0 + b_1 X_1$. The input must be a 2D array (matrix), which is why `X_test` from `iloc` already has the correct shape.
 
 ## Step 6: Visualize Results
 
@@ -410,7 +489,17 @@ plt.ylabel('Salary')
 plt.show()
 ```
 
-Red dots are the actual training data points. The blue line is the regression line predicted by the model.
+`plt.scatter(X_train, y_train, color='red')` plots the actual training data as red dots. `plt.plot(X_train, regressor.predict(X_train), color='blue')` draws the regression line in blue by plotting predicted values against the training features. `plt.title()`, `plt.xlabel()`, and `plt.ylabel()` set the chart title and axis labels. `plt.show()` renders and displays the plot.
+
+**Important `plt.scatter` parameters:**
+
+| Parameter | Purpose                                                                       |
+| --------- | ----------------------------------------------------------------------------- |
+| `s`       | Marker size in points² (default `20`)                                         |
+| `c`       | Color or array of colors for each point                                       |
+| `marker`  | Marker shape: `'o'` (default circle), `'s'` (square), `'^'` (triangle), `'x'` |
+| `alpha`   | Transparency from 0 (invisible) to 1 (opaque)                                 |
+| `label`   | Legend label for this dataset                                                 |
 
 ### Test Set
 
@@ -423,7 +512,7 @@ plt.ylabel('Salary')
 plt.show()
 ```
 
-The regression line is the same (trained on the training set). The red dots are the actual test data points. The closer the dots are to the line, the better the model.
+The regression line is the same (trained on the training set). The red dots are the actual test data points. The closer the dots are to the line, the better the model. Note that `plt.plot` still uses `X_train` to draw the line because the model was trained on that data; the line itself does not change.
 
 ## Step 7: Make a Single Prediction
 
@@ -437,10 +526,7 @@ print(regressor.predict([[12]]))
 
 The model predicts a salary of approximately $138,968 for an employee with 12 years of experience.
 
-The input `[[12]]` uses double brackets because `predict()` expects a 2D array:
-- `12` is a scalar
-- `[12]` is a 1D array
-- `[[12]]` is a 2D array (required format)
+The input `[[12]]` uses double brackets because `predict()` expects a 2D array: the outer brackets create a list of samples, and the inner brackets define a single sample with one feature.
 
 ## Step 8: Extract the Equation
 
@@ -458,4 +544,4 @@ The final regression equation is:
 
 $$Salary = 9345.94 \times YearsExperience + 26816.19$$
 
-`coef_` returns the slope ($b_1$) and `intercept_` returns the y-intercept ($b_0$). These are attributes (not methods), so they are accessed without parentheses.
+`coef_` returns an array of slope coefficients ($b_1$). It is an array because in multiple regression there would be one coefficient per feature. `intercept_` returns the y-intercept ($b_0$) as a single float. Together they define the complete linear equation. You can also compute the model's $R^2$ score using `regressor.score(X_test, y_test)`, which returns a value between 0 and 1 indicating how well the model explains the variance in the data.
