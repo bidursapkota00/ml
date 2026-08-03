@@ -1,6 +1,17 @@
-# Machine Learning
+# Machine Learning Complete Guide
 
-## The Machine Learning Process
+![Bidur Sapkota](https://www.bidursapkota.com.np/images/gravatar.webp "Bidur Sapkota - Developer")&nbsp;[Bidur Sapkota](https://www.bidursapkota.com.np/)
+
+![Machine Learning Complete Guide by Bidur Sapkota](ml-1200.webp "Machine Learning Complete Guide - Blog by Bidur Sapkota")
+
+## Table of Contents
+
+1. [Data Preprocessing](#data-preprocessing)
+2. [Simple Linear Regression](#simple-linear-regression)
+
+---
+
+## The ML Process
 
 Every ML project follows three stages.
 
@@ -12,15 +23,15 @@ Every ML project follows three stages.
 
 ---
 
-# Part 1: Data Preprocessing
+## Data Preprocessing
 
-## Key Terminology
+### Key Terminology
 
 - **Features** are the input columns (independent variables) used to make predictions.
 - **Dependent variable** is the output column the model predicts.
 - **`iloc`** stands for "integer location" and is used to select rows and columns by their integer index positions.
 
-## Sample Dataset
+### Sample Dataset
 
 ```csv
 Country,Age,Salary,Purchased
@@ -38,7 +49,7 @@ France,37,67000,Yes
 
 Here, `Country`, `Age`, and `Salary` are features (X). `Purchased` is the dependent variable (y). The dataset has missing values in the `Age` and `Salary` columns.
 
-## Step 1: Import Libraries
+### Importing Libraries
 
 ```python
 import numpy as np
@@ -50,7 +61,7 @@ import pandas as pd
 - **Matplotlib** is used for plotting charts.
 - **Pandas** handles data import and manipulation via DataFrames.
 
-## Step 2: Import and Separate the Dataset
+### Importing the Dataset
 
 ```python
 dataset = pd.read_csv('Data.csv')
@@ -95,7 +106,7 @@ print(y)
 ['No' 'Yes' 'No' 'No' 'Yes' 'Yes' 'No' 'Yes' 'No' 'Yes']
 ```
 
-## Step 3: Handle Missing Data
+### Handling Missing Data
 
 Missing values appear as `nan`. Deleting rows with missing data loses information. A better approach is to replace each missing value with the mean of its column.
 
@@ -135,13 +146,13 @@ print(X)
  ['France' 37.0 67000.0]]
 ```
 
-## Step 4: Encode Categorical Data
+### Encoding Categorical Data
 
 ML models work with numbers, not strings. Categorical columns must be converted.
 
-### Encoding the Independent Variable (One-Hot Encoding)
+#### One-Hot Encoding
 
-For features, use One-Hot Encoding. It creates one binary column per category. This avoids imposing a false numerical order (e.g., France=0, Germany=1, Spain=2 would wrongly imply Germany is "between" France and Spain).
+For features/independent variables, use One-Hot Encoding. It creates one binary column per category. This avoids imposing a false numerical order (e.g., France=0, Germany=1, Spain=2 would wrongly imply Germany is "between" France and Spain).
 
 ```python
 from sklearn.compose import ColumnTransformer
@@ -187,7 +198,7 @@ print(X)
 
 The three Country values become three binary columns: `[France, Germany, Spain]`.
 
-### Encoding the Dependent Variable (Label Encoding)
+#### Label Encoding (Dependent Variable)
 
 For the dependent variable, use Label Encoding. It converts categories into integers. This is acceptable here because the model treats y as a label, not a numeric value with magnitude.
 
@@ -209,7 +220,7 @@ print(y)
 
 `No` becomes 0 and `Yes` becomes 1.
 
-## Step 5: Split into Training and Test Sets
+### Splitting the Dataset
 
 The training set is used to train the model. The test set is used to evaluate it on unseen data. A typical split is 80% training and 20% test.
 
@@ -272,37 +283,37 @@ print(y_test)
 [0 1]
 ```
 
-## Step 6: Feature Scaling
+### Feature Scaling
 
 Features with vastly different ranges (e.g., Age: 27-50 vs Salary: 48000-83000) can cause some features to dominate the model. Feature scaling brings all features to a comparable range. It is always applied column-wise, not across columns or rows.
 
-### Normalization (Min-Max Scaling)
+#### Normalization (Min-Max Scaling)
 
 $$X' = \frac{X - X_{min}}{X_{max} - X_{min}}$$
 
 Rescales values to the range **[0, 1]**. Best for algorithms that require bounded inputs (k-NN, Neural Networks) or when the data does not follow a normal distribution. Sensitive to outliers.
 
-### Standardization (Z-Score Scaling)
+#### Standardization (Z-Score Scaling)
 
 $$X' = \frac{X - \mu}{\sigma}$$
 
 Rescales values to have mean = 0 and standard deviation = 1. Most values fall in [-3, +3]. Works well for most algorithms (Linear Regression, SVM, PCA). Less sensitive to outliers.
 
-### Which to Choose?
+#### Which to Choose?
 
 Standardization is the safer default because it works regardless of the data distribution. Use normalization when the algorithm explicitly requires bounded input values.
 
-### Why Scale After Splitting?
+#### Why Scale After Splitting?
 
 Feature scaling must happen after the train-test split to avoid data leakage. If you scale before splitting, the mean, standard deviation, min, and max are computed using test data too. This means the model indirectly "sees" test data during training, producing overly optimistic results that will not generalize.
 
 The correct workflow: fit the scaler on the training set only, then apply that same transformation to the test set.
 
-### Should One-Hot Encoded Columns Be Scaled?
+#### Should One-Hot Columns Be Scaled?
 
 No. One-hot encoded columns are already 0 or 1. Scaling them would distort their meaning as binary indicators and offers no benefit.
 
-### Applying Standardization
+#### Applying Standardization
 
 ```python
 from sklearn.preprocessing import StandardScaler
@@ -357,7 +368,7 @@ Only columns 3 onward (Age, Salary) are scaled. The one-hot encoded columns (0, 
 
 ---
 
-# Part 2: Simple Linear Regression
+## Simple Linear Regression
 
 Regression models predict a continuous real value. Simple Linear Regression models the relationship between one independent variable (X) and one dependent variable (y) as a straight line.
 
@@ -372,7 +383,7 @@ $$\hat{y} = b_0 + b_1 X_1$$
 
 **Example:** Predicting potato yield from fertilizer: $Potatoes[t] = 8 + 3 \times Fertilizer[kg]$. Here $b_0 = 8$ tons (base yield) and $b_1 = 3$ tons/kg (yield gain per kg of fertilizer).
 
-## Ordinary Least Squares (OLS)
+### Ordinary Least Squares (OLS)
 
 OLS finds the best-fit line by choosing $b_0$ and $b_1$ that minimize the sum of squared residuals.
 
@@ -384,7 +395,7 @@ $$\epsilon_i = y_i - \hat{y}_i$$
 
 This ensures the line is as close as possible to all data points collectively.
 
-## Sample Dataset
+### Sample Dataset
 
 ```csv
 YearsExperience,Salary
@@ -420,7 +431,7 @@ YearsExperience,Salary
 10.5,121872.00
 ```
 
-## Step 1: Import Libraries
+### Importing Libraries
 
 ```python
 import numpy as np
@@ -428,7 +439,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 ```
 
-## Step 2: Import the Dataset
+### Importing the Dataset
 
 ```python
 dataset = pd.read_csv('Salary_Data.csv')
@@ -436,7 +447,7 @@ X = dataset.iloc[:, :-1].values
 y = dataset.iloc[:, -1].values
 ```
 
-## Step 3: Split into Training and Test Sets
+### Splitting the Dataset
 
 ```python
 from sklearn.model_selection import train_test_split
@@ -447,7 +458,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 1/3, rando
 
 Feature scaling is not required for Simple Linear Regression because the `LinearRegression` class handles it internally.
 
-## Step 4: Train the Model
+### Training the Model
 
 ```python
 from sklearn.linear_model import LinearRegression
@@ -468,7 +479,7 @@ regressor.fit(X_train, y_train)
 
 `fit_intercept=False` is used when you know the relationship passes through the origin (e.g., zero input means zero output). `n_jobs` only affects multi-target regression (multiple y columns); for single-target regression it has no effect.
 
-## Step 5: Predict Test Set Results
+### Predicting Results
 
 ```python
 y_pred = regressor.predict(X_test)
@@ -476,9 +487,9 @@ y_pred = regressor.predict(X_test)
 
 `predict(X_test)` takes the test features and returns predicted salary values using the learned equation $\hat{y} = b_0 + b_1 X_1$. The input must be a 2D array (matrix), which is why `X_test` from `iloc` already has the correct shape.
 
-## Step 6: Visualize Results
+### Visualizing Results
 
-### Training Set
+#### Training Set
 
 ```python
 plt.scatter(X_train, y_train, color = 'red')
@@ -501,7 +512,7 @@ plt.show()
 | `alpha`   | Transparency from 0 (invisible) to 1 (opaque)                                 |
 | `label`   | Legend label for this dataset                                                 |
 
-### Test Set
+#### Test Set
 
 ```python
 plt.scatter(X_test, y_test, color = 'red')
@@ -514,7 +525,7 @@ plt.show()
 
 The regression line is the same (trained on the training set). The red dots are the actual test data points. The closer the dots are to the line, the better the model. Note that `plt.plot` still uses `X_train` to draw the line because the model was trained on that data; the line itself does not change.
 
-## Step 7: Make a Single Prediction
+### Single Prediction
 
 ```python
 print(regressor.predict([[12]]))
@@ -528,7 +539,7 @@ The model predicts a salary of approximately $138,968 for an employee with 12 ye
 
 The input `[[12]]` uses double brackets because `predict()` expects a 2D array: the outer brackets create a list of samples, and the inner brackets define a single sample with one feature.
 
-## Step 8: Extract the Equation
+### Extracting the Equation
 
 ```python
 print(regressor.coef_)
