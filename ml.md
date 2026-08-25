@@ -854,3 +854,9 @@ print(regressor.intercept_)
 ```
 
 `coef_` returns one coefficient per feature: three for the dummy variables and three for the numerical features. `intercept_` returns $b_0$. The coefficients show that R&D Spend (`7.73e-01`) has the largest effect on profit, while Administration (`3.29e-02`) and Marketing Spend (`3.66e-02`) have much smaller effects. This means for every dollar increase in R&D spend, profit increases by approximately $0.77, holding all other variables constant.
+
+---
+
+Visualizing Results remaining for above mutliptle regression section
+
+---
