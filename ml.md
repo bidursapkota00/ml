@@ -9,6 +9,7 @@
 1. [Data Preprocessing](#data-preprocessing)
 2. [Simple Linear Regression](#simple-linear-regression)
 3. [Multiple Linear Regression](#multiple-linear-regression)
+4. [Polynomial Regression](#polynomial-regression)
 
 ---
 
@@ -855,8 +856,225 @@ print(regressor.intercept_)
 
 `coef_` returns one coefficient per feature: three for the dummy variables and three for the numerical features. `intercept_` returns $b_0$. The coefficients show that R&D Spend (`7.73e-01`) has the largest effect on profit, while Administration (`3.29e-02`) and Marketing Spend (`3.66e-02`) have much smaller effects. This means for every dollar increase in R&D spend, profit increases by approximately $0.77, holding all other variables constant.
 
+### Backward Elimination (Manual Implementation)
+
+Backward Elimination removes predictors one at a time based on their p-values until only statistically significant variables remain. This implementation uses `statsmodels` for access to p-values, which scikit-learn's `LinearRegression` does not provide.
+
+**Same upto "Encoding Categorical Data" as in Multiple Linear Regression.**
+
+#### Avoiding the Dummy Variable Trap
+
+```python
+X = X[:, 1:]
+```
+
+When using `statsmodels`, you must manually drop one dummy column to avoid perfect multicollinearity. This removes the first dummy column so the remaining dummies encode the categorical variable without redundancy.
+
+#### Adding the Constant Column
+
+```python
+import statsmodels.api as sm
+X = np.append(arr = np.ones((50, 1)).astype(int), values = X, axis = 1)
+```
+
+`statsmodels` OLS does not automatically include an intercept term ($b_0$). `np.ones((50, 1))` creates a column of 1s (one for each of the 50 observations). `np.append(..., axis=1)` prepends this column to the feature matrix so the model can fit an intercept.
+
+#### Iterative Elimination
+
+```python
+X_opt = X[:, [0, 1, 2, 3, 4, 5]]
+X_opt = X_opt.astype(np.float64)
+regressor_OLS = sm.OLS(endog = y, exog = X_opt).fit()
+regressor_OLS.summary()
+```
+
+Start with all predictors. `sm.OLS(endog=y, exog=X_opt).fit()` fits an Ordinary Least Squares model. `endog` is the dependent variable and `exog` is the matrix of independent variables (including the constant). `.summary()` prints a detailed table including each predictor's coefficient, standard error, t-statistic, and p-value.
+
+Examine the p-values in the summary. Remove the predictor with the highest p-value if it exceeds the significance level (0.05), then refit:
+
+```python
+X_opt = X[:, [0, 1, 3, 4, 5]]
+X_opt = X_opt.astype(np.float64)
+regressor_OLS = sm.OLS(endog = y, exog = X_opt).fit()
+regressor_OLS.summary()
+```
+
+Column 2 (one of the dummy variables) had the highest p-value and was removed. Continue the process:
+
+```python
+X_opt = X[:, [0, 3, 4, 5]]
+X_opt = X_opt.astype(np.float64)
+regressor_OLS = sm.OLS(endog = y, exog = X_opt).fit()
+regressor_OLS.summary()
+```
+
+```python
+X_opt = X[:, [0, 3, 5]]
+X_opt = X_opt.astype(np.float64)
+regressor_OLS = sm.OLS(endog = y, exog = X_opt).fit()
+regressor_OLS.summary()
+```
+
+```python
+X_opt = X[:, [0, 3]]
+X_opt = X_opt.astype(np.float64)
+regressor_OLS = sm.OLS(endog = y, exog = X_opt).fit()
+regressor_OLS.summary()
+```
+
+At each step, the predictor with the highest p-value above 0.05 is removed. The process ends when all remaining predictors have p-values below 0.05. The final model retains only the constant (column 0) and R&D Spend (column 3), confirming that R&D Spend is the most statistically significant predictor of profit.
+
 ---
 
-Visualizing Results remaining for above mutliptle regression section
+## Polynomial Regression
 
----
+Polynomial Regression extends Linear Regression by adding polynomial terms of the independent variable as additional features. Despite the name, it is still a "linear" model because the equation is linear in its coefficients — the non-linearity comes from the transformed features ($X^2, X^3, \dots$).
+
+**Formula:**
+
+$$\hat{y} = b_0 + b_1 X_1 + b_2 X_1^2 + \dots + b_n X_1^n$$
+
+- $\hat{y}$: predicted value
+- $b_0$: intercept
+- $b_1, b_2, \dots, b_n$: coefficients for each polynomial term
+- $X_1$: independent variable
+- $n$: degree of the polynomial
+
+**When to use:** When the relationship between X and y is curvilinear and a straight line would systematically mispredict. Common examples include salary progression by job level, population growth, and diminishing returns in economics.
+
+### Sample Dataset
+
+```csv
+Position,Level,Salary
+Business Analyst,1,45000
+Junior Consultant,2,50000
+Senior Consultant,3,60000
+Manager,4,80000
+Country Manager,5,110000
+Region Manager,6,150000
+Partner,7,200000
+Senior Partner,8,300000
+C-level,9,500000
+CEO,10,1000000
+```
+
+### Importing Libraries
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+```
+
+### Importing the Dataset
+
+```python
+dataset = pd.read_csv('Position_Salaries.csv')
+X = dataset.iloc[:, 1:-1].values
+y = dataset.iloc[:, -1].values
+```
+
+`iloc[:, 1:-1]` selects only the Level column (index 1), skipping Position (index 0) which is just a label. `iloc[:, -1]` selects Salary as the dependent variable.
+
+### Training the Linear Regression Model
+
+```python
+from sklearn.linear_model import LinearRegression
+lin_reg = LinearRegression()
+lin_reg.fit(X, y)
+```
+
+A standard linear regression is trained on the entire dataset for comparison. The entire dataset is used (no train-test split) because there are only 10 data points — splitting would leave too little data for meaningful training.
+
+### Training the Polynomial Regression Model
+
+```python
+from sklearn.preprocessing import PolynomialFeatures
+poly_reg = PolynomialFeatures(degree = 4)
+X_poly = poly_reg.fit_transform(X)
+lin_reg_2 = LinearRegression()
+lin_reg_2.fit(X_poly, y)
+```
+
+`PolynomialFeatures(degree=4)` creates a transformer that generates polynomial features up to degree 4. For a single feature $X$, `fit_transform(X)` produces the matrix $[1, X, X^2, X^3, X^4]$. `lin_reg_2` is a standard `LinearRegression` model fitted on these polynomial features. The result is a polynomial curve, even though the underlying model is still linear in its coefficients.
+
+**Important `PolynomialFeatures` parameters:**
+
+| Parameter          | Purpose                                                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| `degree`           | Maximum degree of polynomial features (default `2`)                                          |
+| `interaction_only` | `False` (default). If `True`, only interaction features are produced (no $X^2$, $X^3$, etc.) |
+| `include_bias`     | `True` (default) includes a column of 1s for the intercept term                              |
+
+Choosing the right degree is critical. Too low and the model underfits (misses the pattern). Too high and the model overfits (fits noise instead of the true relationship).
+
+### Visualising the Linear Regression Results
+
+```python
+plt.scatter(X, y, color = 'red')
+plt.plot(X, lin_reg.predict(X), color = 'blue')
+plt.title('Truth or Bluff (Linear Regression)')
+plt.xlabel('Position Level')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![Linear Regression](images/2-regression/polynomial_regression/linear_regression.png)
+
+The straight line clearly fails to capture the exponential salary growth at higher levels. This demonstrates that a linear model is inappropriate for this relationship.
+
+### Visualising the Polynomial Regression Results
+
+```python
+plt.scatter(X, y, color = 'red')
+plt.plot(X, lin_reg_2.predict(poly_reg.fit_transform(X)), color = 'blue')
+plt.title('Truth or Bluff (Polynomial Regression)')
+plt.xlabel('Position level')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![Polynomial Regression](images/2-regression/polynomial_regression/polynomial_regression.png)
+
+The polynomial curve follows the data points much more closely. `poly_reg.fit_transform(X)` must be called again to generate the polynomial features that `lin_reg_2` expects as input.
+
+### Visualising with Higher Resolution
+
+```python
+X_grid = np.arange(min(X), max(X), 0.1)
+X_grid = X_grid.reshape((len(X_grid), 1))
+plt.scatter(X, y, color = 'red')
+plt.plot(X_grid, lin_reg_2.predict(poly_reg.fit_transform(X_grid)), color = 'blue')
+plt.title('Truth or Bluff (Polynomial Regression)')
+plt.xlabel('Position level')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![Polynomial Regression (Smoother Curve)](images/2-regression/polynomial_regression/polynomial_regression_smooth.png)
+
+`np.arange(min(X), max(X), 0.1)` creates a finer grid of X values with 0.1 step size instead of integer steps. `reshape((len(X_grid), 1))` converts the 1D array into a 2D column vector. This produces a smoother curve that better reveals the polynomial shape, especially between data points.
+
+### Predicting with Linear Regression
+
+```python
+print(lin_reg.predict([[6.5]]))
+```
+
+```text
+[330378.78787879]
+```
+
+The linear model predicts a salary of approximately $330,379 for level 6.5.
+
+### Predicting with Polynomial Regression
+
+```python
+print(lin_reg_2.predict(poly_reg.fit_transform([[6.5]])))
+```
+
+```text
+[158862.45265155]
+```
+
+The polynomial model predicts a salary of approximately $158,862 for level 6.5. This is far more reasonable — level 6 earns $150,000 and level 7 earns $200,000, so $158,862 is a plausible interpolation. The linear model's prediction of $330,379 is clearly unrealistic, demonstrating why choosing the right model type matters.
