@@ -10,6 +10,7 @@
 2. [Simple Linear Regression](#simple-linear-regression)
 3. [Multiple Linear Regression](#multiple-linear-regression)
 4. [Polynomial Regression](#polynomial-regression)
+5. [Support Vector Regression (SVR)](#support-vector-regression-svr)
 
 ---
 
@@ -1078,3 +1079,214 @@ print(lin_reg_2.predict(poly_reg.fit_transform([[6.5]])))
 ```
 
 The polynomial model predicts a salary of approximately $158,862 for level 6.5. This is far more reasonable — level 6 earns $150,000 and level 7 earns $200,000, so $158,862 is a plausible interpolation. The linear model's prediction of $330,379 is clearly unrealistic, demonstrating why choosing the right model type matters.
+
+---
+
+## Support Vector Regression (SVR)
+
+Support Vector Regression applies the principles of Support Vector Machines to regression problems. Instead of finding a hyperplane that best separates classes (as in SVM classification), SVR finds a hyperplane that best fits the data within a margin of tolerance ($\epsilon$).
+
+In **linear SVR**, the model fits a straight tube (epsilon-insensitive band) around the data. Points inside the tube contribute no loss; only points outside the tube are penalized.
+
+![Linear SVR](images/2-regression/svr/linear_svr.png)
+
+In **non-linear SVR**, a kernel function (such as RBF) maps the data into a higher-dimensional space where a linear tube can capture non-linear relationships in the original space.
+
+![Non-Linear SVR with RBF Kernel](images/2-regression/svr/svr-rbf.png)
+
+**Key difference from other regression models:** SVR requires feature scaling because the algorithm relies on distances and does not internally normalize features like `LinearRegression` does.
+
+### Sample Dataset
+
+This uses the same Position Salaries dataset from Polynomial Regression.
+
+```csv
+Position,Level,Salary
+Business Analyst,1,45000
+Junior Consultant,2,50000
+Senior Consultant,3,60000
+Manager,4,80000
+Country Manager,5,110000
+Region Manager,6,150000
+Partner,7,200000
+Senior Partner,8,300000
+C-level,9,500000
+CEO,10,1000000
+```
+
+### Importing Libraries
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+```
+
+### Importing the Dataset
+
+```python
+dataset = pd.read_csv('Position_Salaries.csv')
+X = dataset.iloc[:, 1:-1].values
+y = dataset.iloc[:, -1].values
+```
+
+```python
+print(X)
+```
+
+```text
+[[ 1]
+ [ 2]
+ [ 3]
+ [ 4]
+ [ 5]
+ [ 6]
+ [ 7]
+ [ 8]
+ [ 9]
+ [10]]
+```
+
+```python
+print(y)
+```
+
+```text
+[  45000   50000   60000   80000  110000  150000  200000  300000  500000
+ 1000000]
+```
+
+`y` needs to be reshaped into a 2D array because `StandardScaler` expects a 2D input.
+
+```python
+y = y.reshape(len(y),1)
+```
+
+```python
+print(y)
+```
+
+```text
+[[  45000]
+ [  50000]
+ [  60000]
+ [  80000]
+ [ 110000]
+ [ 150000]
+ [ 200000]
+ [ 300000]
+ [ 500000]
+ [1000000]]
+```
+
+### Feature Scaling
+
+SVR does not have built-in feature scaling like `LinearRegression`. Because SVR uses distances to define the epsilon-insensitive tube, features with larger magnitudes would dominate the model. Both `X` and `y` must be scaled independently using separate `StandardScaler` instances.
+
+```python
+from sklearn.preprocessing import StandardScaler
+sc_X = StandardScaler()
+sc_y = StandardScaler()
+X = sc_X.fit_transform(X)
+y = sc_y.fit_transform(y)
+```
+
+Two separate scalers are needed because `X` and `y` have different distributions and scales. Each scaler computes its own mean ($\mu$) and standard deviation ($\sigma$) independently.
+
+```python
+print(X)
+```
+
+```text
+[[-1.5666989 ]
+ [-1.21854359]
+ [-0.87038828]
+ [-0.52223297]
+ [-0.17407766]
+ [ 0.17407766]
+ [ 0.52223297]
+ [ 0.87038828]
+ [ 1.21854359]
+ [ 1.5666989 ]]
+```
+
+```python
+print(y)
+```
+
+```text
+[[-0.72004253]
+ [-0.70243757]
+ [-0.66722767]
+ [-0.59680786]
+ [-0.49117815]
+ [-0.35033854]
+ [-0.17428902]
+ [ 0.17781001]
+ [ 0.88200808]
+ [ 2.64250325]]
+```
+
+### Training the SVR Model
+
+```python
+from sklearn.svm import SVR
+regressor = SVR(kernel = 'rbf')
+regressor.fit(X, y)
+```
+
+`SVR(kernel='rbf')` creates a Support Vector Regression model with the Radial Basis Function (Gaussian) kernel. The RBF kernel is the most common choice for non-linear relationships. `fit(X, y)` trains the model on the scaled data. The entire dataset is used (no train-test split) because there are only 10 data points.
+
+**Important `SVR` parameters:**
+
+| Parameter | Purpose                                                                                                               |
+| --------- | --------------------------------------------------------------------------------------------------------------------- |
+| `kernel`  | Kernel type: `'linear'`, `'poly'`, `'rbf'` (default), `'sigmoid'`                                                     |
+| `C`       | Regularization parameter (default `1.0`). Higher values reduce underfitting but risk overfitting                      |
+| `epsilon` | Width of the epsilon-insensitive tube (default `0.1`). Points within this margin contribute no loss                   |
+| `degree`  | Degree of the polynomial kernel (default `3`). Only used when `kernel='poly'`                                         |
+| `gamma`   | Kernel coefficient for `'rbf'`, `'poly'`, and `'sigmoid'`. `'scale'` (default) uses $\frac{1}{n \cdot \text{Var}(X)}$ |
+
+### Predicting a New Result
+
+```python
+sc_y.inverse_transform(regressor.predict(sc_X.transform([[6.5]])).reshape(-1,1))
+```
+
+```text
+array([[170370.0204065]])
+```
+
+Because the model was trained on scaled data, new inputs must be scaled with `sc_X.transform()` before prediction, and the output must be inverse-transformed with `sc_y.inverse_transform()` to get the result back in the original salary scale. `reshape(-1, 1)` converts the 1D prediction into a 2D array as required by `inverse_transform()`. The model predicts a salary of approximately $170,370 for level 6.5.
+
+### Visualising the SVR Results
+
+```python
+plt.scatter(sc_X.inverse_transform(X), sc_y.inverse_transform(y), color = 'red')
+plt.plot(sc_X.inverse_transform(X), sc_y.inverse_transform(regressor.predict(X).reshape(-1,1)), color = 'blue')
+plt.title('Truth or Bluff (SVR)')
+plt.xlabel('Position level')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![SVR Results](images/2-regression/svr/svr-result.png)
+
+`sc_X.inverse_transform(X)` and `sc_y.inverse_transform(y)` convert the scaled values back to original scale for plotting. The red dots are actual salaries and the blue line is the SVR prediction. Notice that SVR does not capture the CEO salary (level 10) well — this is because the CEO salary is an outlier that falls far outside the epsilon-insensitive tube.
+
+### Visualising the SVR Results (Higher Resolution)
+
+```python
+X_grid = np.arange(min(sc_X.inverse_transform(X)), max(sc_X.inverse_transform(X)), 0.1)
+X_grid = X_grid.reshape((len(X_grid), 1))
+plt.scatter(sc_X.inverse_transform(X), sc_y.inverse_transform(y), color = 'red')
+plt.plot(X_grid, sc_y.inverse_transform(regressor.predict(sc_X.transform(X_grid)).reshape(-1,1)), color = 'blue')
+plt.title('Truth or Bluff (SVR)')
+plt.xlabel('Position level')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![SVR Results (Smoother Curve)](images/2-regression/svr/svr-result-smooth.png)
+
+`np.arange(..., 0.1)` creates a finer grid of X values for a smoother curve. The grid values are in the original scale, so they must be transformed with `sc_X.transform(X_grid)` before prediction, and the predictions are inverse-transformed with `sc_y.inverse_transform()` for display. This reveals the smooth non-linear curve that SVR fits to the data, clearly showing how it handles the non-linear salary progression while treating the CEO salary as an outlier.
