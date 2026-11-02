@@ -11,6 +11,8 @@
 3. [Multiple Linear Regression](#multiple-linear-regression)
 4. [Polynomial Regression](#polynomial-regression)
 5. [Support Vector Regression (SVR)](#support-vector-regression-svr)
+6. [Decision Tree Regression](#decision-tree-regression)
+7. [Random Forest Regression](#random-forest-regression)
 
 ---
 
@@ -1290,3 +1292,206 @@ plt.show()
 ![SVR Results (Smoother Curve)](images/2-regression/svr/svr-result-smooth.png)
 
 `np.arange(..., 0.1)` creates a finer grid of X values for a smoother curve. The grid values are in the original scale, so they must be transformed with `sc_X.transform(X_grid)` before prediction, and the predictions are inverse-transformed with `sc_y.inverse_transform()` for display. This reveals the smooth non-linear curve that SVR fits to the data, clearly showing how it handles the non-linear salary progression while treating the CEO salary as an outlier.
+
+---
+
+## Decision Tree Regression
+
+Decision Tree Regression splits the data into regions by learning decision rules from the features, then predicts the average of the target values within each region. Unlike linear models, it can capture non-linear relationships without requiring polynomial features or feature scaling.
+
+![Decision Tree Regression Intuition](images/2-regression/decision_tree_regression/decision_tree_intution.png)
+
+![Decision Tree Regression Splits](images/2-regression/decision_tree_regression/decision_tree.png)
+
+The tree recursively partitions the feature space into smaller regions. At each split, it chooses the feature and threshold that minimizes the variance (or another criterion) within the resulting subsets. Each terminal leaf node stores the average of the target values that fall into that region, and predictions are made by traversing the tree to the appropriate leaf.
+
+### Sample Dataset
+
+This uses the same Position Salaries dataset from Polynomial Regression and SVR.
+
+```csv
+Position,Level,Salary
+Business Analyst,1,45000
+Junior Consultant,2,50000
+Senior Consultant,3,60000
+Manager,4,80000
+Country Manager,5,110000
+Region Manager,6,150000
+Partner,7,200000
+Senior Partner,8,300000
+C-level,9,500000
+CEO,10,1000000
+```
+
+### Importing Libraries
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+```
+
+### Importing the Dataset
+
+```python
+dataset = pd.read_csv('Position_Salaries.csv')
+X = dataset.iloc[:, 1:-1].values
+y = dataset.iloc[:, -1].values
+```
+
+### Training the Decision Tree Regression Model
+
+```python
+from sklearn.tree import DecisionTreeRegressor
+regressor = DecisionTreeRegressor(random_state = 0)
+regressor.fit(X, y)
+```
+
+`DecisionTreeRegressor` builds a regression tree by recursively splitting the data. `random_state=0` fixes the seed for reproducibility when there are ties in split quality. `fit(X, y)` trains the tree on the entire dataset (no train-test split because there are only 10 data points). Feature scaling is not required because decision trees make splits based on thresholds, not distances.
+
+**Important `DecisionTreeRegressor` parameters:**
+
+| Parameter           | Purpose                                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `criterion`         | Function to measure split quality: `'squared_error'` (default), `'friedman_mse'`, `'absolute_error'`, `'poisson'`    |
+| `max_depth`         | Maximum depth of the tree. `None` (default) expands until all leaves are pure or contain `min_samples_split` samples |
+| `min_samples_split` | Minimum samples required to split a node (default `2`)                                                               |
+| `min_samples_leaf`  | Minimum samples required in a leaf node (default `1`)                                                                |
+| `max_features`      | Number of features to consider for each split. `None` (default) uses all features                                    |
+| `random_state`      | Seed for reproducibility                                                                                             |
+
+`max_depth`, `min_samples_split`, and `min_samples_leaf` are the primary hyperparameters for controlling overfitting. A deeper tree captures more detail but risks fitting noise.
+
+### Predicting a New Result
+
+```python
+regressor.predict([[6.5]])
+```
+
+```text
+array([150000.])
+```
+
+The model predicts a salary of $150,000 for level 6.5. Because a decision tree predicts the average of the training values in each leaf, level 6.5 falls into the same leaf as level 6 (salary $150,000). Unlike polynomial regression or SVR, the prediction is always exactly one of the training set values — the tree cannot interpolate between data points.
+
+### Visualising the Decision Tree Regression Results (Higher Resolution)
+
+```python
+X_grid = np.arange(min(X), max(X), 0.01)
+X_grid = X_grid.reshape((len(X_grid), 1))
+plt.scatter(X, y, color = 'red')
+plt.plot(X_grid, regressor.predict(X_grid), color = 'blue')
+plt.title('Truth or Bluff (Decision Tree Regression)')
+plt.xlabel('Position level')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![Decision Tree Regression Results](images/2-regression/decision_tree_regression/output.png)
+
+`np.arange(min(X), max(X), 0.01)` creates a fine grid to reveal the staircase pattern characteristic of decision trees. Each horizontal step represents a leaf node that predicts a constant value for all inputs in that region. The high-resolution grid is essential here — using only the original X values would plot a misleading smooth-looking line through the step centers.
+
+---
+
+## Random Forest Regression
+
+Random Forest Regression is an ensemble learning method that combines multiple decision trees to produce a more robust and accurate prediction. Each tree is trained on a random subset of the data (with replacement), and the final prediction is the average of all individual tree predictions. This approach reduces overfitting compared to a single decision tree.
+
+**Working of Ensemble Learning - Random Forest**
+
+1. Pick a random K data points from the training set (bootstrap sampling).
+2. Build a decision tree on these K data points.
+3. Repeat steps 1-2 for N trees (controlled by `n_estimators`).
+4. For a new data point, each tree makes a prediction and the final result is the average of all N predictions.
+
+This process of training multiple models on random subsets and averaging their predictions is called **bagging** (Bootstrap Aggregating). By combining many trees, the random forest reduces variance without substantially increasing bias.
+
+### Sample Dataset
+
+This uses the same Position Salaries dataset.
+
+```csv
+Position,Level,Salary
+Business Analyst,1,45000
+Junior Consultant,2,50000
+Senior Consultant,3,60000
+Manager,4,80000
+Country Manager,5,110000
+Region Manager,6,150000
+Partner,7,200000
+Senior Partner,8,300000
+C-level,9,500000
+CEO,10,1000000
+```
+
+### Importing Libraries
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+```
+
+### Importing the Dataset
+
+```python
+dataset = pd.read_csv('Position_Salaries.csv')
+X = dataset.iloc[:, 1:-1].values
+y = dataset.iloc[:, -1].values
+```
+
+### Training the Random Forest Regression Model
+
+```python
+from sklearn.ensemble import RandomForestRegressor
+regressor = RandomForestRegressor(n_estimators = 10, random_state = 0)
+regressor.fit(X, y)
+```
+
+`RandomForestRegressor` creates an ensemble of decision trees. `n_estimators=10` specifies the number of trees in the forest. `random_state=0` fixes the seed for reproducibility. `fit(X, y)` trains all 10 trees on the entire dataset. Like individual decision trees, random forests do not require feature scaling.
+
+**Important `RandomForestRegressor` parameters:**
+
+| Parameter           | Purpose                                                                                                          |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `n_estimators`      | Number of trees in the forest (default `100`). More trees generally improve performance but increase computation |
+| `criterion`         | Split quality function: `'squared_error'` (default), `'absolute_error'`, `'friedman_mse'`, `'poisson'`           |
+| `max_depth`         | Maximum depth of each tree. `None` (default) expands fully                                                       |
+| `min_samples_split` | Minimum samples required to split a node (default `2`)                                                           |
+| `min_samples_leaf`  | Minimum samples required in a leaf node (default `1`)                                                            |
+| `max_features`      | Features to consider per split: `1.0` (default, all features), `'sqrt'`, `'log2'`, or a fraction                 |
+| `bootstrap`         | `True` (default) uses bootstrap sampling. `False` uses the whole dataset for each tree                           |
+| `n_jobs`            | Number of CPU cores for parallel training. `-1` uses all cores                                                   |
+| `random_state`      | Seed for reproducibility                                                                                         |
+| `oob_score`         | `False` (default). If `True`, uses out-of-bag samples to estimate generalization score                           |
+
+`n_estimators` is the most important hyperparameter — increasing it generally improves accuracy up to a point of diminishing returns. `max_features` controls the randomness of each tree; using fewer features per split increases diversity among trees, which often improves ensemble performance.
+
+### Predicting a New Result
+
+```python
+regressor.predict([[6.5]])
+```
+
+```text
+array([167000.])
+```
+
+The model predicts a salary of $167,000 for level 6.5. This is the average prediction across all 10 trees. Unlike the single decision tree which predicted exactly $150,000 (the salary at level 6), the random forest produces a more nuanced prediction because different trees, trained on different subsets, may split the data differently around level 6.5.
+
+### Visualising the Random Forest Regression Results (Higher Resolution)
+
+```python
+X_grid = np.arange(min(X), max(X), 0.01)
+X_grid = X_grid.reshape((len(X_grid), 1))
+plt.scatter(X, y, color = 'red')
+plt.plot(X_grid, regressor.predict(X_grid), color = 'blue')
+plt.title('Truth or Bluff (Random Forest Regression)')
+plt.xlabel('Position level')
+plt.ylabel('Salary')
+plt.show()
+```
+
+![Random Forest Regression Results](images/2-regression/random_forest_regression/output.png)
+
+The plot shows a staircase pattern similar to a single decision tree, but with more steps. Each step represents the average prediction across the 10 trees. The additional steps arise because different trees split at different thresholds, and averaging their predictions creates intermediate levels. With more trees (`n_estimators`), the steps become finer and the prediction surface becomes smoother.
